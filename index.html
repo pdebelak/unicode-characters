@@ -114,11 +114,14 @@
 
       // You should have received a copy of the GNU General Public License
       // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+      const CHARACTER_COUNT = 100;
+
       class UnicodeChars extends HTMLElement {
         constructor() {
           super();
 
           this.characters = [];
+          this.unicode = [];
         }
 
         connectedCallback() {
@@ -133,41 +136,45 @@
           section.appendChild(this.input);
           this.appendChild(section);
 
-          this.filter = this.filter.bind(this);
+          this.render = this.render.bind(this);
 
-          this.input.addEventListener('input', this.filter);
+          this.input.addEventListener('input', this.render);
 
           fetch('unicode.json').then(resp => resp.json()).then(resp => {
-            this.render(resp);
+            this.unicode = Object.keys(resp).map(key => new Character(resp[key], key));
+            this.render();
           });
+
+          const list = document.createElement('ul');
+          for (let i = 0; i < CHARACTER_COUNT; i++) {
+            const li = document.createElement('li');
+            const character = document.createElement('unicode-char');
+            li.appendChild(character);
+            list.appendChild(li);
+            this.characters.push(character);
+          }
+          this.appendChild(list);
 
           this.input.focus();
         }
 
         disconnectedCallback() {
-          this.input.removeEventListener('input', this.filter);
+          this.input.removeEventListener('input', this.render);
         }
 
-        render(unicode) {
-          const list = document.createElement('ul');
+        render() {
+          const regexes = this.input.value.split(' ').map(f => new RegExp(`.*${f}.*`, 'i'));
+          const matches = this.unicode.filter(c => c.matches(regexes));
 
-          Object.keys(unicode).forEach(key => {
-            const li = document.createElement('li');
-            const character = document.createElement('unicode-char');
-            character.setAttribute('glyph', unicode[key]);
-            character.setAttribute('name', key);
-            li.appendChild(character);
-            list.appendChild(li);
-            this.characters.push(character);
-          });
-
-          this.appendChild(list);
-        }
-
-        filter(event) {
-          const regexes = event.target.value.split(' ').map(f => new RegExp(`.*${f}.*`, 'i'));
-          for (let i = 0; i < this.characters.length; i++) {
-            this.characters[i].filter(regexes);
+          for (let i = 0; i < CHARACTER_COUNT; i++) {
+            const match = matches[i];
+            if (match) {
+              this.characters[i].name = match.name;
+              this.characters[i].glyph = match.glyph;
+            } else {
+              this.characters[i].name = null;
+              this.characters[i].glyph = null;
+            }
           }
         }
       }
@@ -175,36 +182,57 @@
       window.customElements.define('unicode-chars', UnicodeChars);
 
       class UnicodeChar extends HTMLElement {
-        connectedCallback() {
-          const glyph = document.createElement('span');
-          glyph.textContent = this.getAttribute('glyph');
-          glyph.className = 'glyph';
-          this.appendChild(glyph);
-          const name = document.createElement('span');
-          const nameValue = this.getAttribute('name');
-          name.textContent = nameValue.charAt(0) + nameValue.slice(1).toLowerCase();
-          this.copyCharacter = this.copyCharacter.bind(this);
-          this.appendChild(name);
-          this.addEventListener('click', this.copyCharacter);
+        get name() {
+          return this.getAttribute('name');
         }
 
-        disconnectedCallback() {
-          this.removeEventListener('click', this.copyCharacter);
-        }
+        set name(name) {
+          this.setAttribute('name', name);
+          const nameValue = name || '';
+          if (this.isConnected) {
+            this.querySelector('.glyph-name').textContent = nameValue.charAt(0) + nameValue.slice(1).toLowerCase();
+          }
 
-        filter(regexes) {
-          const name = this.getAttribute('name');
-          if (regexes.every(r => name.match(r))) {
+          if (name) {
             this.classList.remove('hidden');
           } else {
             this.classList.add('hidden');
           }
         }
 
+        get glyph() {
+          return this.getAttribute('glyph');
+        }
+
+        set glyph(glyph) {
+          this.setAttribute('glyph', glyph);
+          if (this.isConnected) {
+            this.querySelector('.glyph').textContent = glyph;
+          }
+        }
+
+        connectedCallback() {
+          const glyph = document.createElement('span');
+          glyph.className = 'glyph';
+          this.appendChild(glyph);
+          const name = document.createElement('span');
+          name.className = 'glyph-name';
+          this.copyCharacter = this.copyCharacter.bind(this);
+          this.appendChild(name);
+          this.addEventListener('click', this.copyCharacter);
+
+          // call setters to put data into html
+          this.name = this.name;
+          this.glyph = this.glyph;
+        }
+
+        disconnectedCallback() {
+          this.removeEventListener('click', this.copyCharacter);
+        }
+
         copyCharacter() {
           const input = document.createElement('input');
-          input.value = this.getAttribute('glyph');
-          console.log(input.value);
+          input.value = this.glyph;
           this.appendChild(input);
           input.select();
           input.setSelectionRange(0, 99999);
@@ -217,12 +245,23 @@
           notification.appendChild(div);
           this.appendChild(notification);
           window.setTimeout(() => {
-            elem.removeChild(notification);
+            this.removeChild(notification);
           }, 1000);
         }
       }
 
       window.customElements.define('unicode-char', UnicodeChar);
+
+      class Character {
+        constructor(glyph, name) {
+          this.glyph = glyph;
+          this.name = name;
+        }
+
+        matches(regexes) {
+          return regexes.every(r => this.name.match(r));
+        }
+      }
     </script>
   </body>
 </html>
