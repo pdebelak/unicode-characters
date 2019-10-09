@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8">
     <title>Unicode Symbols</title>
+    <meta name="description" content="Find and copy unicode symbols.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
       html {
         --container-width: 800px;
@@ -24,11 +26,16 @@
         color: var(--white);
       }
       .header-container {
-        width: var(--container-width);
+        max-width: var(--container-width);
         margin: 0 auto;
       }
       .header-container h1 {
         font-weight: normal;
+      }
+      @media (max-width: 800px) {
+        .header-container h1 {
+          margin-left: 0.5em;
+        }
       }
       label {
         display: block;
