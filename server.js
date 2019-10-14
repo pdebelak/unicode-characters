@@ -37,6 +37,14 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname + '/index.html'));
 });
 
+app.get('/app.css', (req, res) => {
+  res.sendFile(path.join(__dirname + '/app.css'));
+});
+
+app.get('/app.js', (req, res) => {
+  res.sendFile(path.join(__dirname + '/app.js'));
+});
+
 app.get('/unicode', (req, res) => {
   const search = req.query.search || '';
   const resultCount = parseInt(req.query.count, 10);
