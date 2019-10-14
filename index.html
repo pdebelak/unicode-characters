@@ -12,6 +12,7 @@
         --orange: #FF851B;
         --purple: #B10DC9;
         --white: #fff;
+        --light-gray: #ddd;
         --section-padding: 1em;
       }
       body {
@@ -97,6 +98,20 @@
       .hidden {
         display: none;
       }
+      .pagination {
+        display: flex;
+        justify-content: space-between;
+      }
+      .pagination a {
+        padding: 0.5em;
+        background-color: var(--orange);
+        color: var(--white);
+        text-decoration: none;
+      }
+      .pagination .disabled {
+        pointer-events: none;
+        background-color: var(--light-gray);
+      }
     </style>
   </head>
   <body>
@@ -121,7 +136,7 @@
 
       // You should have received a copy of the GNU General Public License
       // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-      const CHARACTER_COUNT = 100;
+      const CHARACTER_COUNT = 25;
 
       class UnicodeChars extends HTMLElement {
         constructor() {
@@ -145,6 +160,7 @@
           this.appendChild(section);
 
           this.render = this.render.bind(this);
+          this.paginate = this.paginate.bind(this);
 
           this.input.addEventListener('input', this.render);
 
@@ -158,24 +174,66 @@
           }
           this.appendChild(list);
 
+          const pagination = document.createElement('div')
+          pagination.className = 'pagination';
+          this.prev = document.createElement('a');
+          this.prev.innerHTML = '&larr; Previous'
+          this.prev.className = 'disabled';
+          this.prev.addEventListener('click', this.paginate);
+          pagination.appendChild(this.prev);
+          this.next = document.createElement('a');
+          this.next.innerHTML = 'Next &rarr;'
+          this.next.className = 'disabled';
+          this.next.addEventListener('click', this.paginate);
+          pagination.appendChild(this.next);
+          this.appendChild(pagination);
+
+          window.addEventListener('popstate', this.render);
+
           this.input.focus();
 
           this.render();
         }
 
         disconnectedCallback() {
+          window.removeEventListener('popstate', this.render);
           this.input.removeEventListener('input', this.render);
+          this.next.removeEventListener('click', this.paginate);
+          this.prev.removeEventListener('click', this.paginage);
+        }
+
+        get currentPage() {
+          const page = new URLSearchParams(window.location.search).get('page') || '1';
+          return parseInt(page, 10);
+        }
+
+        paginate(e) {
+          e.preventDefault();
+          history.pushState(undefined, 'paginate', e.target.href);
+          this.render();
         }
 
         async render() {
-          const search = encodeURIComponent(this.input.value.trim());
-          if (search) {
-            history.replaceState(undefined, search, `?search=${search}`);
+          const search = this.input.value.trim();
+          const params = new URLSearchParams(window.location.search);
+          if (search && search !== params.get('search')) {
+            params.set('search', search);
+            params.set('page', 1);
+          } else if (!search) {
+            params.delete('search');
+          }
+          let paramsString = params.toString();
+          if (paramsString) {
+            history.replaceState(undefined, search, '?' + paramsString);
           } else {
             history.replaceState(undefined, search, '/');
           }
 
-          const url = `/unicode?count=${CHARACTER_COUNT}&search=${search}`;
+          let url = `/unicode?count=${CHARACTER_COUNT}&search=${search}`;
+          const page = this.currentPage;
+          if (page) {
+            url += `&page=${page}`;
+          }
           const response = await (await fetch(url)).json();
           const characters = response.characters;
 
@@ -192,6 +250,25 @@
             if (noResults) {
               this.querySelector('ul').removeChild(noResults);
             }
+          }
+          const pages = response.pages;
+          if (page < pages) {
+            const nextParams = new URLSearchParams(window.location.search);
+            nextParams.set('page', page + 1);
+            this.next.classList.remove('disabled');
+            this.next.href = `?${nextParams.toString()}`;
+          } else {
+            this.next.classList.add('disabled');
+            this.next.href = '';
+          }
+          if (page > 1) {
+            const prevParams = new URLSearchParams(window.location.search);
+            prevParams.set('page', page - 1);
+            this.prev.classList.remove('disabled');
+            this.prev.href = `?${prevParams.toString()}`;
+          } else {
+            this.prev.classList.add('disabled');
+            this.prev.href = '';
           }
 
           for (let i = 0; i < CHARACTER_COUNT; i++) {
