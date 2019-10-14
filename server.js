@@ -43,7 +43,8 @@ app.get('/unicode', (req, res) => {
   const page = parseInt(req.query.page || '1', 10);
   const offset = (page - 1) * resultCount;
   const regexes = search.split(/\s+/).map(s => new RegExp(`.*${s}.*`, 'i'));
-  const matches = characters.filter(c => c.matches(regexes)).slice(offset);
+  const allMatches = characters.filter(c => c.matches(regexes));
+  const matches = allMatches.slice(offset);
   const results = [];
   for (let i = 0; i < resultCount; i++) {
     const match = matches[i];
@@ -51,7 +52,7 @@ app.get('/unicode', (req, res) => {
       results.push({ name: match.name, glyph: match.glyph });
     }
   }
-  res.json({ characters: results, pages: Math.ceil(matches.length / resultCount) });
+  res.json({ characters: results, pages: Math.ceil(allMatches.length / resultCount) });
 });
 
 const listener = app.listen(process.env.PORT || 3000, () => {
