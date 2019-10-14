@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Unicode Symbols</title>
+    <title>Unicode Characters</title>
     <meta name="description" content="Find and copy unicode symbols.">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -101,7 +101,7 @@
   </head>
   <body>
     <header>
-      <div class="header-container"><h1>Unicode Symbols</h1></div>
+      <div class="header-container"><h1>Unicode Characters</h1></div>
     </header>
     <noscript>Unfortunately, this page requires javascript to use.</noscript>
     <unicode-chars></unicode-chars>
@@ -128,7 +128,6 @@
           super();
 
           this.characters = [];
-          this.unicode = [];
         }
 
         connectedCallback() {
@@ -147,11 +146,6 @@
 
           this.input.addEventListener('input', this.render);
 
-          fetch('unicode.json').then(resp => resp.json()).then(resp => {
-            this.unicode = Object.keys(resp).map(key => new Character(resp[key], key));
-            this.render();
-          });
-
           const list = document.createElement('ul');
           for (let i = 0; i < CHARACTER_COUNT; i++) {
             const li = document.createElement('li');
@@ -163,18 +157,36 @@
           this.appendChild(list);
 
           this.input.focus();
+
+          this.render();
         }
 
         disconnectedCallback() {
           this.input.removeEventListener('input', this.render);
         }
 
-        render() {
-          const regexes = this.input.value.split(' ').map(f => new RegExp(`.*${f}.*`, 'i'));
-          const matches = this.unicode.filter(c => c.matches(regexes));
+        async render() {
+          const url = `/unicode?count=${CHARACTER_COUNT}&search=${encodeURIComponent(this.input.value)}`;
+          const response = await (await fetch(url)).json();
+          const characters = response.characters;
+
+          if (characters.length === 0) {
+            let noResults = document.getElementById('no-results');
+            if (!noResults) {
+              noResults = document.createElement('li');
+              noResults.id = 'no-results';
+              noResults.textContent = 'No results match your search';
+              this.querySelector('ul').appendChild(noResults);
+            }
+          } else {
+            const noResults = document.getElementById('no-results');
+            if (noResults) {
+              this.querySelector('ul').removeChild(noResults);
+            }
+          }
 
           for (let i = 0; i < CHARACTER_COUNT; i++) {
-            const match = matches[i];
+            const match = characters[i];
             if (match) {
               this.characters[i].name = match.name;
               this.characters[i].glyph = match.glyph;

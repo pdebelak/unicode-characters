@@ -4,12 +4,15 @@ A single page app to see and filter unicode symbols.
 
 ## Development
 
+To install dependencies, run `make dependencies`.
+
 To regenerate the `unicode.json` file (if, for example, the unicode
 database has been updated), run `make json`.
 
 To run a server locally, run `make server`.
 
-Both of these commands require `python3` to be installed.
+All of these commands require a recent version of `node` to be
+installed.
 
 ## License
 

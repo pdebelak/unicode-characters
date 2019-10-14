@@ -1,5 +1,8 @@
 server:
-	python3 -m http.server
+	npm start
 
 json:
-	python3 generate_json.py unicode.json
+	node generateJSON.js unicode.json
+
+dependencies:
+	npm install
