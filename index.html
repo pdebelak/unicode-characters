@@ -136,6 +136,8 @@
           label.for = 'filter';
           label.textContent = 'Filter';
           this.input = document.createElement('input');
+
+          this.input.value = new URLSearchParams(window.location.search).get('search');
           this.input.name = 'filter';
           this.input.className = 'filter';
           section.appendChild(label);
@@ -166,7 +168,14 @@
         }
 
         async render() {
-          const url = `/unicode?count=${CHARACTER_COUNT}&search=${encodeURIComponent(this.input.value)}`;
+          const search = encodeURIComponent(this.input.value.trim());
+          if (search) {
+            history.replaceState(undefined, search, `?search=${search}`);
+          } else {
+            history.replaceState(undefined, search, '/');
+          }
+
+          const url = `/unicode?count=${CHARACTER_COUNT}&search=${search}`;
           const response = await (await fetch(url)).json();
           const characters = response.characters;
 
@@ -207,9 +216,8 @@
 
         set name(name) {
           this.setAttribute('name', name);
-          const nameValue = name || '';
           if (this.isConnected) {
-            this.querySelector('.glyph-name').textContent = nameValue.charAt(0) + nameValue.slice(1).toLowerCase();
+            this.querySelector('.glyph-name').textContent = name;
           }
 
           if (name) {
