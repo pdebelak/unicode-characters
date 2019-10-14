@@ -16,68 +16,41 @@
 const CHARACTER_COUNT = 25;
 
 class UnicodeChars extends HTMLElement {
-  constructor() {
-    super();
-
-    this.characters = [];
-  }
-
   connectedCallback() {
-    const section = document.createElement('section');
-    const label = document.createElement('label');
-    label.for = 'filter';
-    label.textContent = 'Filter';
-    this.input = document.createElement('input');
-
-    this.input.value = new URLSearchParams(window.location.search).get('search');
-    this.input.name = 'filter';
-    this.input.className = 'filter';
-    section.appendChild(label);
-    section.appendChild(this.input);
-    this.appendChild(section);
+    this.innerHTML = `
+<section>
+  <label for="filter">Filter</label>
+  <input type="text" id="filter" name="filter" class="filter" value="${this.search}">
+</section>
+<ul>
+  ${[...Array(CHARACTER_COUNT).keys()].map(() => '<li><unicode-char></unicode-char></li>').join('')}
+</ul>
+<div class="pagination">
+  <a class="disabled" id="prev">&larr; Previous</a>
+  <a class="disabled" id="next">Next &rarr;</a>
+</div>`;
+    this.characters = [...this.getElementsByTagName('unicode-char')];
 
     this.render = this.render.bind(this);
+    this.loadFromURL = this.loadFromURL.bind(this);
     this.setSearch = this.setSearch.bind(this);
     this.paginate = this.paginate.bind(this);
 
-    this.input.addEventListener('input', this.setSearch);
+    document.getElementById('filter').addEventListener('input', this.setSearch);
+    document.getElementById('prev').addEventListener('click', this.paginate);
+    document.getElementById('next').addEventListener('click', this.paginate);
+    window.addEventListener('popstate', this.loadFromURL);
 
-    const list = document.createElement('ul');
-    for (let i = 0; i < CHARACTER_COUNT; i++) {
-      const li = document.createElement('li');
-      const character = document.createElement('unicode-char');
-      li.appendChild(character);
-      list.appendChild(li);
-      this.characters.push(character);
-    }
-    this.appendChild(list);
+    document.getElementById('filter').focus();
 
-    const pagination = document.createElement('div')
-    pagination.className = 'pagination';
-    this.prev = document.createElement('a');
-    this.prev.innerHTML = '&larr; Previous'
-    this.prev.className = 'disabled';
-    this.prev.addEventListener('click', this.paginate);
-    pagination.appendChild(this.prev);
-    this.next = document.createElement('a');
-    this.next.innerHTML = 'Next &rarr;'
-    this.next.className = 'disabled';
-    this.next.addEventListener('click', this.paginate);
-    pagination.appendChild(this.next);
-    this.appendChild(pagination);
-
-    window.addEventListener('popstate', this.render);
-
-    this.input.focus();
-
-    this.render();
+    this.loadFromURL();
   }
 
   disconnectedCallback() {
     window.removeEventListener('popstate', this.render);
-    this.input.removeEventListener('input', this.setSearch);
-    this.next.removeEventListener('click', this.paginate);
-    this.prev.removeEventListener('click', this.paginage);
+    document.getElementById('filter').removeEventListener('input', this.setSearch);
+    document.getElementById('next').removeEventListener('click', this.paginate);
+    document.getElementById('prev').removeEventListener('click', this.paginage);
   }
 
   get currentPage() {
@@ -91,9 +64,13 @@ class UnicodeChars extends HTMLElement {
     this.render();
   }
 
+  get search() {
+    return new URLSearchParams(window.location.search).get('search') || '';
+  }
+
   setSearch() {
     const params = new URLSearchParams(window.location.search);
-    const search = this.input.value.trim();
+    const search = document.getElementById('filter').value.trim();
     if (search) {
       params.set('search', search);
       params.set('page', 1);
@@ -109,15 +86,40 @@ class UnicodeChars extends HTMLElement {
     this.render()
   }
 
-  async render() {
-    const search = (new URLSearchParams(window.location.search).get('search') || '').trim();
-    this.input.value = search;
+  loadFromURL() {
+    document.getElementById('filter').value = this.search;
 
-    let url = `/unicode?count=${CHARACTER_COUNT}&search=${encodeURIComponent(search)}`;
+    this.render();
+  }
+
+  setPagination(pages) {
     const page = this.currentPage;
-    if (page) {
-      url += `&page=${page}`;
+    const next = document.getElementById('next');
+    const prev = document.getElementById('prev');
+    if (page < pages) {
+      const nextParams = new URLSearchParams(window.location.search);
+      nextParams.set('page', page + 1);
+      next.classList.remove('disabled');
+      next.href = `?${nextParams.toString()}`;
+    } else {
+      next.classList.add('disabled');
+      next.href = '';
     }
+    if (page > 1) {
+      const prevParams = new URLSearchParams(window.location.search);
+      prevParams.set('page', page - 1);
+      prev.classList.remove('disabled');
+      prev.href = `?${prevParams.toString()}`;
+    } else {
+      prev.classList.add('disabled');
+      prev.href = '';
+    }
+  }
+
+  async render() {
+    const search = this.search;
+
+    let url = `/unicode?count=${CHARACTER_COUNT}&search=${encodeURIComponent(search)}&page=${this.currentPage}`;
     const response = await (await fetch(url)).json();
     const characters = response.characters;
 
@@ -135,34 +137,18 @@ class UnicodeChars extends HTMLElement {
         this.querySelector('ul').removeChild(noResults);
       }
     }
-    const pages = response.pages;
-    if (page < pages) {
-      const nextParams = new URLSearchParams(window.location.search);
-      nextParams.set('page', page + 1);
-      this.next.classList.remove('disabled');
-      this.next.href = `?${nextParams.toString()}`;
-    } else {
-      this.next.classList.add('disabled');
-      this.next.href = '';
-    }
-    if (page > 1) {
-      const prevParams = new URLSearchParams(window.location.search);
-      prevParams.set('page', page - 1);
-      this.prev.classList.remove('disabled');
-      this.prev.href = `?${prevParams.toString()}`;
-    } else {
-      this.prev.classList.add('disabled');
-      this.prev.href = '';
-    }
 
+    this.setPagination(response.pages);
+
+    const characterElems = this.getElementsByTagName('unicode-char');
     for (let i = 0; i < CHARACTER_COUNT; i++) {
       const match = characters[i];
       if (match) {
-        this.characters[i].name = match.name;
-        this.characters[i].glyph = match.glyph;
+        characterElems[i].name = match.name;
+        characterElems[i].glyph = match.glyph;
       } else {
-        this.characters[i].name = null;
-        this.characters[i].glyph = null;
+        characterElems[i].name = null;
+        characterElems[i].glyph = null;
       }
     }
   }
@@ -200,13 +186,10 @@ class UnicodeChar extends HTMLElement {
   }
 
   connectedCallback() {
+    this.innerHTML = `<span class="glyph"></span><span class="glyph-name"></span>`;
     const glyph = document.createElement('span');
-    glyph.className = 'glyph';
-    this.appendChild(glyph);
-    const name = document.createElement('span');
-    name.className = 'glyph-name';
+
     this.copyCharacter = this.copyCharacter.bind(this);
-    this.appendChild(name);
     this.addEventListener('click', this.copyCharacter);
 
     // call setters to put data into html
@@ -239,14 +222,3 @@ class UnicodeChar extends HTMLElement {
 }
 
 window.customElements.define('unicode-char', UnicodeChar);
-
-class Character {
-  constructor(glyph, name) {
-    this.glyph = glyph;
-    this.name = name;
-  }
-
-  matches(regexes) {
-    return regexes.every(r => this.name.match(r));
-  }
-}
