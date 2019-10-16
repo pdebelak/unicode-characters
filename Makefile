@@ -3,6 +3,3 @@ server:
 
 json:
 	node generateJSON.js unicode.json
-
-dependencies:
-	npm install

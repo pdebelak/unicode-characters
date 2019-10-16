@@ -14,8 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 const fs = require('fs');
 const path = require('path');
-
-const express = require('express');
+const http = require('http');
 
 class Character {
   constructor(glyph, name) {
@@ -31,24 +30,23 @@ class Character {
 const mapping = JSON.parse(fs.readFileSync('unicode.json'));
 const characters = Object.keys(mapping).map(key => new Character(mapping[key], key));
 
-const app = express();
+function sendStaticFile(resp, filePath, contentType, status) {
+  fs.readFile(path.join(__dirname, filePath), (error, content) => {
+    if (error) {
+      resp.writeHead(500);
+      resp.end('Error: '+error.code+' ..\n');
+    } else {
+      resp.writeHead(status || 200, { 'Content-Type': contentType });
+      resp.end(content, 'utf-8');
+    }
+  });
+}
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname + '/index.html'));
-});
-
-app.get('/app.css', (req, res) => {
-  res.sendFile(path.join(__dirname + '/app.css'));
-});
-
-app.get('/app.js', (req, res) => {
-  res.sendFile(path.join(__dirname + '/app.js'));
-});
-
-app.get('/unicode', (req, res) => {
-  const search = req.query.search || '';
-  const resultCount = parseInt(req.query.count, 10);
-  const page = parseInt(req.query.page || '1', 10);
+function sendUnicodeData(resp, path, params) {
+  const query = new URLSearchParams(params);
+  const search = query.get('search') || '';
+  const resultCount = parseInt(query.get('count'), 10);
+  const page = parseInt(query.get('page') || '1', 10);
   const offset = (page - 1) * resultCount;
   const regexes = search.split(/\s+/).map(s => new RegExp(`.*${s}.*`, 'i'));
   const allMatches = characters.filter(c => c.matches(regexes));
@@ -60,9 +58,26 @@ app.get('/unicode', (req, res) => {
       results.push({ name: match.name, glyph: match.glyph });
     }
   }
-  res.json({ characters: results, pages: Math.ceil(allMatches.length / resultCount) });
-});
+  resp.writeHead(200, { 'Content-Type': 'application/json' });
+  resp.end(JSON.stringify({ characters: results, pages: Math.ceil(allMatches.length / resultCount) }), 'utf-8');
+}
 
-const listener = app.listen(process.env.PORT || 3000, () => {
-  console.log('Your app is listening on port ' + listener.address().port);
-});
+http.createServer((req, resp) => {
+  const [path, params] = req.url.split('?');
+  switch (path) {
+  case '/':
+    sendStaticFile(resp, 'index.html', 'text/html');
+    break;
+  case '/app.css':
+    sendStaticFile(resp, 'app.css', 'text/css');
+    break;
+  case '/app.js':
+    sendStaticFile(resp, 'app.js', 'text/javascript');
+    break;
+  case '/unicode':
+    sendUnicodeData(resp, path, params);
+    break;
+  default:
+    sendStaticFile(resp, '404.html', 'text/html', 404);
+  }
+}).listen(process.env.PORT || 3000);

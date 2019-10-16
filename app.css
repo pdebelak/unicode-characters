@@ -42,7 +42,7 @@ section {
   padding: var(--section-padding);
   border-bottom: 1px solid var(--blue);
 }
-unicode-chars {
+unicode-chars, .not-found {
   display: block;
   max-width: var(--container-width);
   margin: 0 auto;
