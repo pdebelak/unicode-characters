@@ -1,6 +1,6 @@
-# Unicode Symbols
+# Unicode Characters
 
-A single page app to see and filter unicode symbols.
+A single page app to see and filter unicode characters.
 
 ## Development
 

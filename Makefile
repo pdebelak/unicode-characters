@@ -2,4 +2,4 @@ server:
 	npm start
 
 json:
-	node generateJSON.js unicode.json
+	node src/generateJSON.js unicode.json
