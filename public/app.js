@@ -33,8 +33,6 @@ class UnicodeChars extends HTMLElement {
   <a class="disabled" id="prev">&larr; Previous</a>
   <a class="disabled" id="next">Next &rarr;</a>
 </div>`;
-    this.characters = [...this.getElementsByTagName("unicode-char")];
-
     this.render = this.render.bind(this);
     this.loadFromURL = this.loadFromURL.bind(this);
     this.setSearch = this.setSearch.bind(this);
@@ -205,8 +203,6 @@ class UnicodeChar extends HTMLElement {
 
   connectedCallback() {
     this.innerHTML = `<span class="glyph"></span><span class="glyph-name"></span>`;
-    const glyph = document.createElement("span");
-
     this.copyCharacter = this.copyCharacter.bind(this);
     this.addEventListener("click", this.copyCharacter);
 
