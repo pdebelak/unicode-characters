@@ -15,38 +15,45 @@
 const fs = require("fs");
 const https = require("https");
 
-
 function readUnicodeData() {
   process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 
   return new Promise((resolve, reject) => {
-    https.get("https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt", resp => {
-      let data = "";
+    https
+      .get(
+        "https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt",
+        resp => {
+          let data = "";
 
-      resp.on("data", chunk => {
-        data += chunk;
+          resp.on("data", chunk => {
+            data += chunk;
+          });
+
+          resp.on("end", () => {
+            const mapping = {};
+
+            data.split("\n").forEach(line => {
+              let l = line.trim();
+              if (l.length === 0) {
+                return;
+              }
+              l = l.split(";");
+              if (l[1].charAt(0) === "<") {
+                return;
+              }
+              const name = l[1].charAt(0) + l[1].slice(1).toLowerCase();
+              const glyph = String.fromCodePoint(parseInt(l[0], 16));
+              mapping[name] = glyph;
+            });
+
+            resolve(mapping);
+          });
+        }
+      )
+      .on("error", err => {
+        reject(err);
       });
-
-      resp.on("end", () => {
-        const mapping = {};
-
-        data.split("\n").forEach(line => {
-          let l = line.trim();
-          if (l.length === 0) { return; }
-          l = l.split(';');
-          if (l[1].charAt(0) === '<') { return; }
-          const name = l[1].charAt(0) + l[1].slice(1).toLowerCase();
-          const glyph = String.fromCodePoint(parseInt(l[0], 16));
-          mapping[name] = glyph;
-        });
-
-        resolve(mapping);
-      });
-
-    }).on('error', err => {
-      reject(err);
-    });
-  })
+  });
 }
 
 async function writeUnicodeData(filename) {

@@ -12,10 +12,10 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const server = require('./server.js');
+const server = require("./server.js");
 
 class Character {
   constructor(glyph, name) {
@@ -28,31 +28,53 @@ class Character {
   }
 }
 
-const mapping = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'unicode.json')));
-const characters = Object.keys(mapping).map(key => new Character(mapping[key], key));
-
-function sendUnicodeData(resp, req) {
-  const search = req.query.search || '';
-  const resultCount = parseInt(req.query.count, 10);
-  const page = parseInt(req.query.page || '1', 10);
-  const offset = (page - 1) * resultCount;
-  const regexes = search.split(/\s+/).map(s => new RegExp(`.*${s}.*`, 'i'));
-  const allMatches = characters.filter(c => c.matches(regexes));
-  const matches = allMatches.slice(offset);
-  const results = [];
-  for (let i = 0; i < resultCount; i++) {
-    const match = matches[i];
-    if (match) {
-      results.push({ name: match.name, glyph: match.glyph });
-    }
+class Characters {
+  constructor() {
+    const mapping = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "..", "unicode.json"))
+    );
+    this.characters = Object.keys(mapping).map(
+      key => new Character(mapping[key], key)
+    );
+    this.unicodeData = this.unicodeData.bind(this);
   }
-  resp.json({ characters: results, pages: Math.ceil(allMatches.length / resultCount) });
+
+  unicodeData(resp, req) {
+    const search = req.query.search || "";
+    const resultCount = parseInt(req.query.count, 10);
+    const page = parseInt(req.query.page || "1", 10);
+    const offset = (page - 1) * resultCount;
+    const regexes = search.split(/\s+/).map(s => new RegExp(`.*${s}.*`, "i"));
+    const allMatches = this.characters.filter(c => c.matches(regexes));
+    const matches = allMatches.slice(offset);
+    const results = [];
+    for (let i = 0; i < resultCount; i++) {
+      const match = matches[i];
+      if (match) {
+        results.push({ name: match.name, glyph: match.glyph });
+      }
+    }
+    resp.json({
+      characters: results,
+      pages: Math.ceil(allMatches.length / resultCount)
+    });
+  }
 }
 
-server.start({
-  '/': resp => resp.sendFile('public/index.html'),
-  '/public/app.css': resp => resp.sendFile('public/app.css'),
-  '/public/app.js': resp => resp.sendFile('public/app.js'),
-  '/unicode': sendUnicodeData,
-  '404': resp => resp.sendFile('public/404.html', 404),
-}, process.env.PORT || 3000);
+server.start(
+  {
+    "/": server.sendFile("public/index.html"),
+    "/public/app.css": server.sendFile("public/app.css"),
+    "/public/app.js": server.sendFile("public/app.js"),
+    "/public/android-chrome-192x192.png": server.sendFile("public/android-chrome-192x192.png"),
+    "/public/android-chrome-512x512.png": server.sendFile("public/android-chrome-512x512.png"),
+    "/public/apple-touch-icon.png": server.sendFile("public/apple-touch-icon.png"),
+    "/public/favicon-16x16.png": server.sendFile("public/favicon-16x16.png"),
+    "/public/favicon-32x32.png": server.sendFile("public/favicon-32x32.png"),
+    "/public/favicon.ico": server.sendFile("public/favicon.ico"),
+    "/favicon.ico": server.sendFile("public/favicon.ico"),
+    "/unicode": new Characters().unicodeData,
+    "404": server.sendFile("public/404.html", 404)
+  },
+  process.env.PORT || 3000
+);

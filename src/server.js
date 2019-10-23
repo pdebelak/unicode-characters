@@ -12,17 +12,20 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-const fs = require('fs');
-const http = require('http');
-const querystring = require('querystring');
-const path = require('path');
-const url = require('url');
+const fs = require("fs");
+const http = require("http");
+const querystring = require("querystring");
+const path = require("path");
+const url = require("url");
 
 const contentTypeMapping = {
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'text/javascript',
-}
+  ".css": "text/css",
+  ".html": "text/html",
+  ".ico": "image/x-icon",
+  ".js": "text/javascript",
+  ".png": "image/png",
+  ".webmanifest": "text/plain"
+};
 
 const fileCache = {};
 
@@ -46,13 +49,14 @@ class Response {
   sendFile(filePath, status) {
     this._readCachedFile(filePath)
       .then(content => {
-        const contentType = contentTypeMapping[path.extname(filePath)] || 'text/plain';
-        this._resp.writeHead(status || 200, { 'Content-Type': contentType });
-        this._resp.end(content, 'utf-8');
+        const contentType =
+          contentTypeMapping[path.extname(filePath)] || "text/plain";
+        this._resp.writeHead(status || 200, { "Content-Type": contentType });
+        this._resp.end(content, "utf-8");
       })
       .catch(e => {
         this._resp.writeHead(500);
-        this._resp.end('Error: '+e.code+' ..\n');
+        this._resp.end("Error: " + e.code + " ..\n");
       });
   }
 
@@ -62,7 +66,7 @@ class Response {
       return Promise.resolve(cachedFile);
     }
     return new Promise((resolve, reject) => {
-      fs.readFile(path.join(__dirname, '..', filePath), (error, content) => {
+      fs.readFile(path.join(__dirname, "..", filePath), (error, content) => {
         if (error) {
           reject(error);
         } else {
@@ -74,17 +78,25 @@ class Response {
   }
 
   json(content, status) {
-    this._resp.writeHead(status || 200, { 'Content-Type': 'application/json' });
-    this._resp.end(JSON.stringify(content), 'utf-8');
+    this._resp.writeHead(status || 200, { "Content-Type": "application/json" });
+    this._resp.end(JSON.stringify(content), "utf-8");
   }
 }
 
-module.exports.start = (mapping, port) => {
-  http.createServer((rq, rp) => {
-    const req = new Request(rq);
-    const resp = new Response(rp);
+module.exports.sendFile = (fileName, status) => {
+  return resp => {
+    resp.sendFile(fileName, status);
+  };
+};
 
-    const func = mapping[req.path] || mapping['404'];
-    func(resp, req);
-  }).listen(port);
-}
+module.exports.start = (mapping, port) => {
+  http
+    .createServer((rq, rp) => {
+      const req = new Request(rq);
+      const resp = new Response(rp);
+
+      const func = mapping[req.path] || mapping["404"];
+      func(resp, req);
+    })
+    .listen(port);
+};
