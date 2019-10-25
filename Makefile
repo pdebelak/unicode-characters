@@ -1,3 +1,6 @@
+test:
+	npm test
+
 server:
 	npm start
 

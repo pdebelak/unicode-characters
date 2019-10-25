@@ -9,6 +9,8 @@ database has been updated), run `make json`.
 
 To run a server locally, run `make server`.
 
+To run tests, first do `npm install`, then run `make test`.
+
 All of these commands require a recent version of `node` to be
 installed.
 
