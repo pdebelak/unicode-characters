@@ -14,6 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 const CHARACTER_COUNT = 25;
+const DEBOUNCE_TIMEOUT = 250;
+
+function debounce(func) {
+  let timer = undefined;
+  return () => {
+    if (timer) {
+      window.clearTimeout(timer);
+    }
+    timer = setTimeout(() => func(), DEBOUNCE_TIMEOUT);
+  };
+}
 
 class UnicodeChars extends HTMLElement {
   connectedCallback() {
@@ -33,9 +44,8 @@ class UnicodeChars extends HTMLElement {
   <a class="disabled" id="prev">&larr; Previous</a>
   <a class="disabled" id="next">Next &rarr;</a>
 </div>`;
-    this.render = this.render.bind(this);
     this.loadFromURL = this.loadFromURL.bind(this);
-    this.setSearch = this.setSearch.bind(this);
+    this.setSearch = debounce(this.setSearch.bind(this));
     this.paginate = this.paginate.bind(this);
 
     document.getElementById("filter").addEventListener("input", this.setSearch);
@@ -49,12 +59,12 @@ class UnicodeChars extends HTMLElement {
   }
 
   disconnectedCallback() {
-    window.removeEventListener("popstate", this.render);
+    window.removeEventListener("popstate", this.loadFromURL);
     document
       .getElementById("filter")
       .removeEventListener("input", this.setSearch);
     document.getElementById("next").removeEventListener("click", this.paginate);
-    document.getElementById("prev").removeEventListener("click", this.paginage);
+    document.getElementById("prev").removeEventListener("click", this.paginate);
   }
 
   get currentPage() {
@@ -198,6 +208,12 @@ class UnicodeChar extends HTMLElement {
     this.setAttribute("glyph", glyph);
     if (this.isConnected) {
       this.querySelector(".glyph").textContent = glyph;
+      if (glyph) {
+        // this.id = glyph;
+        this.setAttribute("id", glyph);
+      } else {
+        this.removeAttribute("id");
+      }
     }
   }
 

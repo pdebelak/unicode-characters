@@ -55,7 +55,7 @@ describe("unicode-characters", () => {
     it("filters to a single element", async () => {
       await page.waitFor("input");
       await page.keyboard.type("die face-1");
-      await page.waitFor("unicode-char");
+      await page.waitFor("unicode-char#⚀");
       const name = await page.$eval(
         "unicode-char .glyph-name",
         el => el.textContent
@@ -74,7 +74,7 @@ describe("unicode-characters", () => {
     it("ignores case", async () => {
       await page.waitFor("input");
       await page.keyboard.type("DIE FACE-1");
-      await page.waitFor("unicode-char");
+      await page.waitFor("unicode-char#⚀");
       const name = await page.$eval(
         "unicode-char .glyph-name",
         el => el.textContent
@@ -85,7 +85,7 @@ describe("unicode-characters", () => {
     it("filters to multiple elements", async () => {
       await page.waitFor("input");
       await page.keyboard.type("die face");
-      await page.waitFor("unicode-char");
+      await page.waitFor("unicode-char#⚀");
       expect((await page.$$("unicode-char:not(.hidden)")).length).to.eql(6);
     });
   });
