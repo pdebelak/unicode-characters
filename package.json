@@ -11,7 +11,7 @@
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "chai": "^4.2.0",
-    "mocha": "^6.2.2",
+    "mocha": "^10.2.0",
     "puppeteer": "^2.0.0"
   }
 }
